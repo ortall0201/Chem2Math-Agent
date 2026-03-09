@@ -1,2 +1,5 @@
-# Chem2Math-Agent
-Can an AI agent serve as an interface layer between chemistry and mathematics by translating chemical principles into formal, scientifically meaningful equations? Lets check chem2math interface using an agent built with codex-gpt-5.3 + gpt 5.4. Excited ? so am I.
+Chem2Math Agent is a small research project exploring whether an AI system can act as a precise interface between chemistry and mathematics.
+
+The goal is to take well-defined chemical principles, translate them into formal mathematical structures, and then turn those structures into simple, correct code. The emphasis is on scientific and algebraic correctness rather than style.
+
+The first benchmark for this repository is the Nernst equation: starting from basic thermodynamic relations, the agent should derive the Nernst equation step by step, explain each symbol, justify the appearance of the logarithmic term, and produce a minimal Python implementation.
