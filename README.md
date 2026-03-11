@@ -4,7 +4,7 @@ The goal is to take well-defined chemical principles, translate them into formal
 
 Main project flow:
 
-Chemistry → Math → Code
+Chemistry -> Math -> Code
 
 The first benchmark for this repository is the Nernst equation: starting from basic thermodynamic relations, the agent should derive the Nernst equation step by step, explain each symbol, justify the appearance of the logarithmic term, and produce a minimal Python implementation.
 
