@@ -27,7 +27,7 @@ Each artifact contains structured metadata for later execution steps.
 
 ## What This MVP Does Not Do
 
-- does not execute Codex
+- does not execute Codex directly
 - does not post back to GitHub
 - does not run as a daemon/service
 - does not include an external bridge
@@ -54,3 +54,24 @@ python automation/polling_worker/poll_github_prs.py --config automation/polling_
 The worker performs one polling pass and exits.
 
 This still does not execute Codex.
+
+## Optional Local Execution Mode (MVP Bridge)
+
+The polling worker can optionally invoke a local executor bridge after each
+newly written artifact.
+
+Enable in config:
+
+- `invoke_executor_after_write: true`
+- `executor_command`: local command template (placeholder value in example config)
+- `artifact_path_argument_mode`: `append`
+
+Bridge script:
+
+- `automation/polling_worker/execute_task.py`
+
+This mode still:
+
+- does not write back to GitHub
+- does not run continuously as a daemon
+- does not use external services
