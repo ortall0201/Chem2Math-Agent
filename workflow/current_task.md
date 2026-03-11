@@ -7,6 +7,7 @@
   - The local polling worker MVP now exists.
   - The polling worker can now be launched from the repo root with one command.
   - The local executor bridge now exists.
+  - The polling loop can now run repeatedly without manual relaunch.
   - The repo already has:
     - PR workflow docs
     - task PR pattern
@@ -14,25 +15,26 @@
     - GitHub pickup signal comment
     - local polling-worker MVP files
 - What is partial:
-  - The system can now detect pickup signals, materialize local task artifacts, and invoke a configured local executor command.
-  - The polling flow still requires a manual one-shot launch.
+  - The system can now detect pickup signals, materialize local task artifacts, and invoke a configured local executor command in repeated polling mode.
+  - It still risks re-processing the same PR/head SHA unless duplicate protection is added.
 - What is missing or unstable:
-  - there is no continuous or repeated polling mode
-  - future PRs are not picked up automatically unless the user reruns the command
+  - there is no processed-state tracking for repeated execution
+  - there is no duplicate-safe `(pr_number, head_sha)` handling
+  - the worker may re-invoke the executor for the same PR signal on later passes
   - there is still no GitHub write-back after local execution
 
 ## Next approved unit of work
 
-Implement a continuous/repeated local polling mode so future PRs can be picked up automatically without manual relaunch.
+Implement duplicate-safe automatic execution in repeated polling mode so the same PR/head SHA is not re-run on every poll.
 
 ## Why this task now
 
 - Why this is the highest-value next move:
-  - It removes the remaining manual relaunch step in the local pickup loop.
+  - It makes repeated local execution safe enough to use in practice.
 - Why this should happen before other candidate tasks:
-  - GitHub trigger, local polling, one-command launch, and local executor bridge already exist.
-  - The next missing piece is repeated pickup over time.
-  - This still stays local-first and avoids daemon/service overbuild.
+  - GitHub trigger, repeated polling, and local executor bridge already exist.
+  - Without duplicate protection, repeated mode can keep re-invoking Codex for the same PR.
+  - This is the smallest bounded step toward practical automatic pickup.
 
 ## Codex handoff
 
@@ -49,24 +51,27 @@ Implement a continuous/repeated local polling mode so future PRs can be picked u
 - `automation/polling_worker/README.md`
 - `automation/polling_worker/config.example.json`
 - `automation/polling_worker/poll_github_prs.py`
-- `run_polling_worker.py`
+- `automation/polling_worker/state.example.json`
 
 ### Exact changes to make
 
-- Update `run_polling_worker.py` so it can optionally run continuously or repeatedly instead of one-shot only.
-- Preferred minimal interface:
-  - keep existing one-shot behavior by default
-  - add an explicit loop mode such as `--loop`
-  - optional `--interval` override is acceptable if it falls back to config
-- Update `automation/polling_worker/config.example.json` with a safe placeholder field such as:
-  - `continuous_mode`
-- `continuous_mode` example value should be `false`
-- Update `automation/polling_worker/poll_github_prs.py` only as needed to support repeated invocation cleanly.
-- Repeated mode should:
-  - sleep between passes using configured interval
-  - reuse existing polling + artifact + optional executor behavior
-  - stop cleanly on keyboard interrupt
-- Do not convert this into a background service or OS-specific daemon.
+- Update `automation/polling_worker/poll_github_prs.py` so repeated mode can avoid re-processing already handled PR/head SHA pairs.
+- Add local processed-state handling using a simple JSON state file.
+- The deduplication key should be:
+  - `pr_number`
+  - `head_sha`
+- Only invoke the executor automatically when a `(pr_number, head_sha)` pair is new.
+- If the same pair has already been processed, skip execution on later polling passes.
+- Extend `automation/polling_worker/config.example.json` with safe placeholder fields such as:
+  - `state_path`
+  - `skip_already_processed`
+- Example values should remain safe placeholders or local paths only.
+- Create `automation/polling_worker/state.example.json` as a tiny example schema file or documented placeholder state shape.
+- Keep state local and transient in practice; do not treat runtime state as PR material.
+- Update `automation/polling_worker/README.md` to explain:
+  - how processed-state tracking works
+  - that duplicate execution is prevented per `(pr_number, head_sha)`
+  - that new commits on the same PR should still be eligible because `head_sha` changes
 - Keep the current artifact schema unchanged:
   - `pr_number`
   - `branch`
@@ -76,13 +81,8 @@ Implement a continuous/repeated local polling mode so future PRs can be picked u
   - `timestamp`
   - `marker_detected`
 - Keep `output_dir` config-driven.
-- Update `automation/polling_worker/README.md` to document:
-  - one-shot mode
-  - repeated/continuous local polling mode
-  - optional local execution mode
-  - still no GitHub write-back
-  - still no daemon/service installation
-  - still no external services
+- Do not add GitHub write-back yet.
+- Do not add daemon/service installation yet.
 
 ### Constraints to preserve
 
@@ -100,14 +100,16 @@ Implement a continuous/repeated local polling mode so future PRs can be picked u
 - keep it minimal and local-first
 - keep artifact schema unchanged
 - keep `output_dir` config-driven
+- keep processed state local and out of PR scope by default
 
 ### Success criteria
 
-- the polling worker can be run once or in repeated mode from the repo root
-- repeated mode picks up future PR signals without manually relaunching each time
+- repeated mode can invoke the executor for new PR/head SHA pairs
+- repeated mode does not re-invoke the executor for already processed pairs
+- pushing a new commit to the same PR can still trigger execution because `head_sha` changes
 - the existing artifact schema is preserved
 - config additions remain credential-free
-- the repo gains automatic repeated local pickup without adding full autonomous orchestration
+- the repo gains duplicate-safe automatic repeated local pickup without adding full autonomous orchestration
 
 ### What not to change
 
