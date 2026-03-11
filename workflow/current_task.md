@@ -4,102 +4,73 @@
 
 - What is already real:
   - GitHub-side pickup signaling works.
-  - PRs labeled `codex-implement` can now receive a machine-readable pickup comment.
+  - The local polling worker MVP now exists.
   - The repo already has:
     - PR workflow docs
     - task PR pattern
     - GitHub trigger protocol
-    - electrochemistry skill + executable code
+    - GitHub pickup signal comment
+    - local polling-worker MVP files
 - What is partial:
-  - The system can now mark PRs as ready for pickup.
-  - It still cannot execute Codex automatically.
+  - The system can now detect pickup signals and materialize local task artifacts.
+  - Running the worker is still more manual than it should be.
 - What is missing or unstable:
-  - there is no local polling worker implementation
-  - there is no claim/process/report loop
-  - there is no local executor bridge from GitHub signal -> Codex run
+  - there is no one-command launcher from the repo root
+  - there is no default config resolution path for easy local use
+  - there is still no actual Codex execution step
 
 ## Next approved unit of work
 
-Implement the first real local polling worker MVP that reads GitHub PR pickup signals and writes a local execution-ready task file.
+Implement a one-command runner for the local polling worker MVP so it can be launched easily from the repository root.
 
 ## Why this task now
 
 - Why this is the highest-value next move:
-  - It adds the first local consumer after the GitHub trigger scaffold.
+  - It makes the existing local polling worker easy to run and observe.
 - Why this should happen before other candidate tasks:
-  - the signal already exists and is testable
-  - without a local worker, the trigger stops at a PR comment
-  - this is the smallest step that moves from “signal exists” toward “Codex can actually be invoked”
+  - the polling worker now exists, but still requires more friction than necessary to test
+  - this improves usability without jumping ahead to Codex execution
 
 ## Codex handoff
 
 ### Files to inspect
 
-- `workflow/pr_protocol.md`
-- `.github/workflows/codex_trigger.yml`
-- `workflow/github_trigger_protocol.md`
-- `workflow/current_task.md`
+- `automation/polling_worker/README.md`
+- `automation/polling_worker/config.example.json`
+- `automation/polling_worker/poll_github_prs.py`
 
 ### Files to modify or create
 
 - `automation/polling_worker/README.md`
 - `automation/polling_worker/config.example.json`
 - `automation/polling_worker/poll_github_prs.py`
+- `run_polling_worker.py`
 
 ### Exact changes to make
 
-- Create `automation/polling_worker/README.md`.
-- The README should explain that this is the first local polling worker MVP.
-- The README should describe the loop:
-  - poll GitHub
-  - look for label `codex-implement`
-  - inspect PR comments
-  - detect marker `codex-task-ready: true`
-  - extract:
-    - PR number
-    - head SHA
-    - branch
-    - task contract path
-  - write a local task artifact
-- The README must clearly state:
-  - this MVP does not execute Codex yet
-  - it only detects and materializes execution-ready tasks locally
-- Create `automation/polling_worker/config.example.json`.
-- The config example should include safe placeholder fields such as:
-  - `github_repo`
-  - `poll_interval_seconds`
-  - `trigger_label`
-  - `pickup_signal_marker`
-  - `task_contract_path`
-  - `output_dir`
-- The config example must not include:
-  - real tokens
-  - usernames
-  - machine-specific paths
-  - personal values
-- Create `automation/polling_worker/poll_github_prs.py`.
-- The script should:
+- Create `run_polling_worker.py` at repo root.
+- The launcher should:
   - use Python standard library only
-  - be clearly marked as MVP
-  - read config from a JSON file path
-  - shell out to `gh` for GitHub data access
-  - read open PRs
-  - inspect comments
-  - detect PRs with:
-    - label `codex-implement`
-    - comment marker `codex-task-ready: true`
-  - write a local JSON artifact to:
-    - `automation/polling_worker/out/pr_<number>.json`
-- The output artifact should contain:
-  - PR number
-  - branch
-  - head SHA
-  - repo
-  - task contract path
-  - timestamp
-  - `marker_detected: true`
-- Single-run polling only.
-- Do not implement daemon/service behavior yet.
+  - by default look for `automation/polling_worker/config.local.json`
+  - if that file does not exist, fall back to `automation/polling_worker/config.example.json`
+  - invoke `automation/polling_worker/poll_github_prs.py`
+  - exit with the child script's exit code
+- Update `automation/polling_worker/poll_github_prs.py` only as needed to work cleanly with the root launcher.
+- Keep the current artifact schema unchanged:
+  - `pr_number`
+  - `branch`
+  - `head_sha`
+  - `repo`
+  - `task_contract_path`
+  - `timestamp`
+  - `marker_detected`
+- Keep `output_dir` config-driven.
+- Update `automation/polling_worker/README.md` so the primary usage becomes:
+  - `python run_polling_worker.py`
+- The README should also document:
+  - local config override path: `automation/polling_worker/config.local.json`
+  - fallback behavior to `config.example.json`
+  - that this still does not execute Codex
 
 ### Constraints to preserve
 
@@ -109,19 +80,20 @@ Implement the first real local polling worker MVP that reads GitHub PR pickup si
 - no secrets
 - no `n8n`
 - no actual Codex execution yet
-- no posting back to GitHub yet
 - no non-standard Python dependencies
+- no GitHub write-back yet
 - no new GitHub Actions
 - no changes to `src/`
 - keep it minimal and local-first
-- use `gh` instead of embedded GitHub tokens in repo code
+- keep artifact schema unchanged
+- keep `output_dir` config-driven
 
 ### Success criteria
 
-- a local script can read GitHub PR state through `gh`
-- it can detect the PR pickup signal already produced by the GitHub Action
-- it can write a structured local task artifact for later execution
-- the repo now has the first real bridge from GitHub signal -> local machine state
+- the polling worker can be launched from repo root with one command
+- config resolution works with local override then example fallback
+- the existing artifact schema is preserved
+- the bridge is easier to test without adding execution
 
 ### What not to change
 
