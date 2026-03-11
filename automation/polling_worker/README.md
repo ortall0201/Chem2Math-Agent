@@ -34,11 +34,23 @@ Each artifact contains structured metadata for later execution steps.
 
 ## Usage
 
-1. Copy `config.example.json` to a local config file (for example `config.local.json`).
-2. Run:
+Primary usage:
+
+```bash
+python run_polling_worker.py
+```
+
+Config resolution:
+
+1. `automation/polling_worker/config.local.json` (local override)
+2. fallback to `automation/polling_worker/config.example.json`
+
+Advanced direct usage:
 
 ```bash
 python automation/polling_worker/poll_github_prs.py --config automation/polling_worker/config.local.json
 ```
 
-The script performs one polling pass and exits.
+The worker performs one polling pass and exits.
+
+This still does not execute Codex.
