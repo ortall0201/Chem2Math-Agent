@@ -5,6 +5,7 @@
 - What is already real:
   - GitHub-side pickup signaling works.
   - The local polling worker MVP now exists.
+  - The polling worker can now be launched from the repo root with one command.
   - The repo already has:
     - PR workflow docs
     - task PR pattern
@@ -13,23 +14,24 @@
     - local polling-worker MVP files
 - What is partial:
   - The system can now detect pickup signals and materialize local task artifacts.
-  - Running the worker is still more manual than it should be.
+  - It still does not turn those artifacts into local Codex execution.
 - What is missing or unstable:
-  - there is no one-command launcher from the repo root
-  - there is no default config resolution path for easy local use
-  - there is still no actual Codex execution step
+  - there is no local executor bridge from task artifact -> Codex run
+  - there is no claim/process/report loop
+  - there is no GitHub write-back after local execution
 
 ## Next approved unit of work
 
-Implement a one-command runner for the local polling worker MVP so it can be launched easily from the repository root.
+Implement the first local executor bridge so the polling-worker flow can consume a generated task artifact and invoke a local executor command for Codex.
 
 ## Why this task now
 
 - Why this is the highest-value next move:
-  - It makes the existing local polling worker easy to run and observe.
+  - It is the first step from “detect task” to “start local execution.”
 - Why this should happen before other candidate tasks:
-  - the polling worker now exists, but still requires more friction than necessary to test
-  - this improves usability without jumping ahead to Codex execution
+  - GitHub-side trigger and local polling now both exist.
+  - The next missing piece is actual local execution bridging.
+  - This still stays bounded and local-first without jumping to full autonomous orchestration.
 
 ## Codex handoff
 
@@ -38,24 +40,46 @@ Implement a one-command runner for the local polling worker MVP so it can be lau
 - `automation/polling_worker/README.md`
 - `automation/polling_worker/config.example.json`
 - `automation/polling_worker/poll_github_prs.py`
+- `run_polling_worker.py`
 
 ### Files to modify or create
 
 - `automation/polling_worker/README.md`
 - `automation/polling_worker/config.example.json`
 - `automation/polling_worker/poll_github_prs.py`
-- `run_polling_worker.py`
+- `automation/polling_worker/execute_task.py`
 
 ### Exact changes to make
 
-- Create `run_polling_worker.py` at repo root.
-- The launcher should:
+- Create `automation/polling_worker/execute_task.py`.
+- The script should:
   - use Python standard library only
-  - by default look for `automation/polling_worker/config.local.json`
-  - if that file does not exist, fall back to `automation/polling_worker/config.example.json`
-  - invoke `automation/polling_worker/poll_github_prs.py`
-  - exit with the child script's exit code
-- Update `automation/polling_worker/poll_github_prs.py` only as needed to work cleanly with the root launcher.
+  - accept a path to one local task artifact JSON
+  - load the artifact
+  - validate required fields:
+    - `pr_number`
+    - `branch`
+    - `head_sha`
+    - `repo`
+    - `task_contract_path`
+    - `marker_detected`
+  - read an executor command template from config
+  - execute that command locally with the artifact path passed as an argument
+  - return the child process exit code
+- The script must not:
+  - post back to GitHub
+  - change labels
+  - run as a daemon
+  - embed credentials
+- Extend `automation/polling_worker/config.example.json` with safe placeholder fields for local execution only, for example:
+  - `executor_command`
+  - `artifact_path_argument_mode`
+- Keep all values as placeholders only.
+- Update `automation/polling_worker/poll_github_prs.py` only as needed so it can optionally invoke `execute_task.py` after writing an artifact.
+- Recommended minimal behavior:
+  - add an optional config flag such as `invoke_executor_after_write`
+  - example value should be `false`
+  - if enabled, call `execute_task.py` for each newly written artifact
 - Keep the current artifact schema unchanged:
   - `pr_number`
   - `branch`
@@ -65,12 +89,12 @@ Implement a one-command runner for the local polling worker MVP so it can be lau
   - `timestamp`
   - `marker_detected`
 - Keep `output_dir` config-driven.
-- Update `automation/polling_worker/README.md` so the primary usage becomes:
-  - `python run_polling_worker.py`
-- The README should also document:
-  - local config override path: `automation/polling_worker/config.local.json`
-  - fallback behavior to `config.example.json`
-  - that this still does not execute Codex
+- Update `automation/polling_worker/README.md` to document:
+  - detection-only mode
+  - optional local execution mode
+  - still no GitHub write-back
+  - still no continuous daemon
+  - still no external services
 
 ### Constraints to preserve
 
@@ -79,9 +103,10 @@ Implement a one-command runner for the local polling worker MVP so it can be lau
 - do not silently change assumptions
 - no secrets
 - no `n8n`
-- no actual Codex execution yet
 - no non-standard Python dependencies
 - no GitHub write-back yet
+- no daemon/service yet
+- no external services
 - no new GitHub Actions
 - no changes to `src/`
 - keep it minimal and local-first
@@ -90,15 +115,14 @@ Implement a one-command runner for the local polling worker MVP so it can be lau
 
 ### Success criteria
 
-- the polling worker can be launched from repo root with one command
-- config resolution works with local override then example fallback
+- the polling-worker flow can consume a generated artifact and call a local executor command
 - the existing artifact schema is preserved
-- the bridge is easier to test without adding execution
+- config additions remain credential-free
+- the repo now has the first local execution bridge without adding full autonomous orchestration
 
 ### What not to change
 
 - do not change unrelated files
-- do not execute Codex yet
 - do not post back to GitHub yet
 - do not add daemon/service behavior yet
 - do not add external services
