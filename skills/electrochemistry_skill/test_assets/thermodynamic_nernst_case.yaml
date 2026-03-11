@@ -1,0 +1,21 @@
+id: ECHEM-THERMO-NERNST-001
+title: Thermodynamic equilibrium potential from reaction quotient
+input_problem: >
+  Compute equilibrium cell potential at a specified temperature and reaction
+  quotient using standard potential and electron count.
+
+expected:
+  classification: thermodynamic-only
+  equation_family:
+    - Nernst / Gibbs-potential relations
+  failure_modes_to_check:
+    - Sign Errors in Electrochemical Relations
+    - Confusing Delta G and Delta G^0
+    - ln vs log10 Confusion
+
+code_validation:
+  possible: true
+  interfaces:
+    - nernst_potential(E0, n, Q, T)
+    - classify_regime(problem)
+    - select_math_path(problem)

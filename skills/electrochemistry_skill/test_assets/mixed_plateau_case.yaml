@@ -1,0 +1,23 @@
+id: ECHEM-MIXED-PLATEAU-001
+title: Near-zero exponential growth with high-overpotential plateau
+input_problem: >
+  Polarization data show exponential current growth near eta = 0 and a
+  current plateau at large |eta|. Select the model regime and math path.
+
+expected:
+  classification: mixed
+  equation_family:
+    - Butler-Volmer (activation-controlled segment)
+    - Diffusion-limited transport bound
+  failure_modes_to_check:
+    - Using Butler-Volmer Beyond Its Reasonable Interpretive Scope
+    - Mixing Thermodynamic and Kinetic Logic
+    - Ignoring Transport Limitations
+
+code_validation:
+  possible: true
+  interfaces:
+    - butler_volmer_current(j0, eta, n, T, alpha_a, alpha_c)
+    - diffusion_limited_current_density(n, D, c_bulk, delta)
+    - classify_regime(problem)
+    - select_math_path(problem)

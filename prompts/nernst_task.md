@@ -1,76 +1,80 @@
-Task: Derive and implement the Nernst equation
-=============================================
+Benchmark 1: Derive and implement the Nernst equation
+=====================================================
 
 Goal
 ----
-Starting only from the two thermodynamic relations in `knowledge/core_principles.md`, derive the Nernst equation step by step, explain the meaning of each symbol, explain where the logarithmic term comes from, and then implement the final equation as a Python function.
+Starting only from the two given thermodynamic relations, derive the Nernst equation step by step, explain every symbol, explain where the logarithmic term comes from, interpret how concentration changes affect potential, and implement the final result as a Python function.
 
-Given core principles
----------------------
-You must use only the following relations as your starting point:
-- \( \Delta G = -n F E \)
-- \( \Delta G = \Delta G^\circ + R T \ln Q \)
+Allowed starting relations (the only allowed starting point)
+-----------------------------------------------------------
+You MUST start from exactly these two relations and no others:
 
-Here:
-- \( \Delta G \) is the Gibbs free energy change under the given conditions.
-- \( \Delta G^\circ \) is the standard Gibbs free energy change.
-- \( n \) is the number of moles of electrons transferred in the redox reaction.
-- \( F \) is the Faraday constant.
-- \( E \) is the cell potential under the given conditions.
-- \( R \) is the gas constant.
-- \( T \) is the absolute temperature (in kelvin).
-- \( Q \) is the reaction quotient.
+1. \( \Delta G = -n F E \)
+2. \( \Delta G = \Delta G^\circ + R T \ln Q \)
+
+Do not introduce additional “known formulas” (e.g., \(E = E^\circ - (RT/nF)\ln Q\), \( \Delta G^\circ = -RT\ln K\), \(E^\circ = (RT/nF)\ln K\), etc.) unless they are explicitly derived from the two relations above.
 
 Derivation requirements
 -----------------------
-1. **State assumptions explicitly**
-   - State any assumptions you make about the reaction, temperature, or activities vs. concentrations.
-   - Make clear that you are working within classical electrochemical thermodynamics.
+Your output MUST include the following sections, in order.
 
-2. **Align the two expressions for \( \Delta G \)**
-   - Show clearly how \( \Delta G = -n F E \) and \( \Delta G = \Delta G^\circ + R T \ln Q \) can be equated.
-   - Justify why it is valid to equate them for the same process under the same conditions.
+1. Chemical assumptions (explicit)
+   - State what “\(Q\)” represents (reaction quotient) and that it is dimensionless.
+   - State whether you are interpreting \(Q\) in terms of activities; if you mention concentrations/pressures, label that as an approximation.
+   - State that the sign conventions depend on the reaction as written (i.e., on how \(Q\) is defined for that reaction).
 
-3. **Solve for \( E \)**
-   - Perform the algebra step by step to obtain an expression for \( E \) as a function of \( E^\circ \), \( T \), \( n \), and \( Q \).
-   - Carefully track minus signs at each algebraic step.
-   - Define \( E^\circ \) in terms of \( \Delta G^\circ \).
+2. Starting relations (verbatim)
+   - Restate the two allowed starting relations exactly.
+   - Define each symbol used in these relations:
+     - \( \Delta G \), \( \Delta G^\circ \), \(n\), \(F\), \(E\), \(R\), \(T\), \(Q\)
+   - For each symbol, provide meaning and typical units.
 
-4. **Explain the logarithmic term**
-   - Explain clearly why a logarithmic term \( \ln Q \) appears in the final expression.
-   - Connect the logarithm to:
-     - The dependence of Gibbs free energy on the reaction quotient.
-     - The statistical/thermodynamic interpretation (at a high level, not in full detail).
-   - If you convert the expression from \( \ln \) to \( \log_{10} \), show the conversion factor \( 2.303 \) explicitly and explain its origin.
+3. Derivation (math steps, no skipping)
+   - Explicitly set the two expressions for \( \Delta G \) equal to each other and justify why (same process, same conditions).
+   - Solve for \(E\) step by step, showing every algebraic manipulation.
+   - Carefully track signs. If you multiply/divide both sides by \(-1\), say so.
+   - Introduce \(E^\circ\) by defining it from \( \Delta G^\circ \) and the first relation:
+     - Show the algebra that leads to \( \Delta G^\circ = -n F E^\circ \).
+   - Substitute that definition into your expression for \(E\) and simplify, step by step.
 
-5. **Define all symbols and units**
-   - For the final Nernst equation, list each symbol, its meaning, and its typical units.
-   - Note any common conventions (e.g., temperature in kelvin, potentials in volts).
+4. Where the logarithm comes from (conceptual)
+   - Explain in plain technical language why a \(\ln Q\) term appears:
+     - It is already present in the second starting relation as the thermodynamic correction from standard conditions to the current composition.
+   - Do NOT introduce additional thermodynamic identities. Stay anchored to the two relations.
+   - If you mention a base-10 form, you MUST show the conversion \( \ln x = 2.303 \log_{10} x \) and identify \(2.303 = \ln 10\).
 
-6. **Discuss sign conventions**
-   - Explain the sign of the \( \ln Q \) term and how it depends on the direction of the reaction as written.
-   - Clarify how increasing \( Q \) affects \( E \), and why this makes physical sense.
+5. Final equation (boxed)
+   - Present the final Nernst equation explicitly for \(E\) as a function of \(E^\circ\), \(T\), \(n\), and \(Q\).
+   - State clearly whether your final equation uses \(\ln\) or \(\log_{10}\). Prefer \(\ln\).
+
+6. Interpretation (words, not just symbols)
+   - Explain how changing concentrations (i.e., changing \(Q\)) affects \(E\).
+   - Include at least these two checks:
+     - When \(Q = 1\), show what \(E\) reduces to and explain why.
+     - When \(Q\) increases, state whether \(E\) increases or decreases (for the reaction as written), and connect that to the sign in your final equation.
 
 Code implementation requirements
 --------------------------------
 After the derivation, write a minimal Python function implementing the final Nernst equation.
 
-1. **Function specification**
-   - Implement a function `nernst_potential(E0, T, n, Q)` in Python.
-   - Use the natural logarithm form as the primary implementation.
-   - You may optionally mention a base-10 logarithm variant, but the core implementation should use `math.log` (natural log).
+1. Function spec
+   - Implement: `nernst_potential(E0, T, n, Q) -> float`
+   - Use the natural logarithm: `math.log(Q)` (this is \(\ln Q\)).
+   - Use only the Python standard library.
 
-2. **Docstring and arguments**
-   - Include a short docstring that:
-     - States the mathematical form being implemented.
-     - Defines each argument (`E0`, `T`, `n`, `Q`) and the expected units.
-   - Assume `F` and `R` are given as constants inside the function, with clear values and units.
+2. Validation requirements
+   - Validate basic domain constraints:
+     - \(T > 0\)
+     - \(n > 0\)
+     - \(Q > 0\)
+   - Raise `ValueError` with a clear message when constraints are violated.
 
-3. **Correctness constraints**
-   - The code must correspond exactly to your final derived equation.
-   - Handle sign conventions carefully so that the behavior of \( E \) as a function of \( Q \) matches the derived and physical expectations.
-   - Use only the Python standard library (`math`).
+3. Constants
+   - Use numeric constants inside the function (or module-level constants) for:
+     - \(R\) (gas constant)
+     - \(F\) (Faraday constant)
+   - State their units in the docstring.
 
-4. **Sanity check**
-   - Briefly describe how you would sanity-check the function (e.g., behavior as \( Q \to 1 \), or comparison to the standard 25 °C form).
+4. Minimal example
+   - Provide one simple example demonstrating usage and expected approximate output.
 
