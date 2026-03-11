@@ -1,0 +1,22 @@
+id: ECHEM-TRANSPORT-DIFFUSION-001
+title: Transport-only diffusion-limited current estimate
+input_problem: >
+  Estimate limiting current density from diffusion coefficient, bulk
+  concentration, and diffusion-layer thickness under 1D steady transport
+  assumptions.
+
+expected:
+  classification: transport-only
+  equation_family:
+    - Fick transport anchor
+    - diffusion-limited current helper
+  failure_modes_to_check:
+    - Ignoring Transport Limitations
+    - Wrong Electron Count n
+
+code_validation:
+  possible: true
+  interfaces:
+    - diffusion_limited_current_density(n, D, c_bulk, delta)
+    - classify_regime(problem)
+    - select_math_path(problem)
