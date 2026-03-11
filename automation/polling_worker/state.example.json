@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "processed_pairs": [
+    {
+      "pr_number": 123,
+      "head_sha": "abcdef1234567890abcdef1234567890abcdef12",
+      "processed_at": "2026-01-01T00:00:00+00:00"
+    }
+  ]
+}
