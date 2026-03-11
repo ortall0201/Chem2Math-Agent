@@ -12,7 +12,10 @@ from __future__ import annotations
 import math
 from typing import Any, Dict, List, Literal
 
-from nernst import F_FARADAY, R_GAS_CONSTANT, nernst_potential
+try:
+    from .nernst import F_FARADAY, R_GAS_CONSTANT, nernst_potential
+except ImportError:
+    from nernst import F_FARADAY, R_GAS_CONSTANT, nernst_potential
 
 Regime = Literal["thermodynamic-only", "kinetic-only", "transport-only", "mixed"]
 

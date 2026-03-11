@@ -1,0 +1,23 @@
+id: ECHEM-KINETIC-TAFEL-001
+title: Kinetic regime with Butler-Volmer and Tafel-limit interpretation
+input_problem: >
+  For a charge-transfer controlled polarization response, identify the kinetic
+  model family and interpret the high-overpotential behavior with Tafel-limit
+  logic.
+
+expected:
+  classification: kinetic-only
+  equation_family:
+    - Butler-Volmer
+    - Tafel (limit only)
+  failure_modes_to_check:
+    - ln vs log10 Confusion
+    - Using Butler-Volmer Beyond Its Reasonable Interpretive Scope
+    - Mixing Thermodynamic and Kinetic Logic
+
+code_validation:
+  possible: true
+  interfaces:
+    - butler_volmer_current(j0, eta, n, T, alpha_a, alpha_c)
+    - classify_regime(problem)
+    - select_math_path(problem)
