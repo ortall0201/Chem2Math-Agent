@@ -15,6 +15,7 @@ import argparse
 import json
 import re
 import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -82,6 +83,7 @@ def main() -> int:
     marker = cfg["pickup_signal_marker"]
     default_task_contract = cfg["task_contract_path"]
     output_dir = Path(cfg["output_dir"])
+    invoke_executor_after_write = bool(cfg.get("invoke_executor_after_write", False))
 
     prs = run_gh_json(
         [
@@ -129,6 +131,20 @@ def main() -> int:
 
         path = write_artifact(output_dir, payload)
         print(f"Wrote {path}")
+
+        if invoke_executor_after_write:
+            executor_script = Path(__file__).resolve().parent / "execute_task.py"
+            cmd = [
+                sys.executable,
+                str(executor_script),
+                "--config",
+                str(Path(args.config).resolve()),
+                "--artifact",
+                str(path.resolve()),
+            ]
+            proc = subprocess.run(cmd, check=False)
+            if proc.returncode != 0:
+                return proc.returncode
 
     return 0
 
