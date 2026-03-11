@@ -34,6 +34,8 @@ Each artifact contains structured metadata for later execution steps.
 
 ## Usage
 
+### One-shot mode (default)
+
 Primary usage:
 
 ```bash
@@ -55,6 +57,27 @@ The worker performs one polling pass and exits.
 
 This still does not execute Codex.
 
+### Repeated local polling mode
+
+Run repeated polling passes:
+
+```bash
+python run_polling_worker.py --loop
+```
+
+Optional interval override (seconds):
+
+```bash
+python run_polling_worker.py --loop --interval 30
+```
+
+Config-based repeated mode is also available:
+
+- set `continuous_mode: true` in config
+- `poll_interval_seconds` controls sleep between passes
+
+Stop cleanly with `Ctrl+C`.
+
 ## Optional Local Execution Mode (MVP Bridge)
 
 The polling worker can optionally invoke a local executor bridge after each
@@ -73,5 +96,5 @@ Bridge script:
 This mode still:
 
 - does not write back to GitHub
-- does not run continuously as a daemon
+- does not install or run as a daemon/service
 - does not use external services

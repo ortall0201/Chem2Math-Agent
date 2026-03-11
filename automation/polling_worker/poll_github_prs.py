@@ -72,12 +72,7 @@ def write_artifact(output_dir: Path, payload: dict[str, Any]) -> Path:
     return path
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Local GitHub PR polling worker MVP (single run).")
-    parser.add_argument("--config", required=True, help="Path to JSON config file.")
-    args = parser.parse_args()
-
-    cfg = load_config(Path(args.config))
+def run_single_pass(cfg: dict[str, Any], config_path: Path) -> int:
     repo = cfg["github_repo"]
     trigger_label = cfg["trigger_label"]
     marker = cfg["pickup_signal_marker"]
@@ -138,7 +133,7 @@ def main() -> int:
                 sys.executable,
                 str(executor_script),
                 "--config",
-                str(Path(args.config).resolve()),
+                str(config_path.resolve()),
                 "--artifact",
                 str(path.resolve()),
             ]
@@ -147,6 +142,15 @@ def main() -> int:
                 return proc.returncode
 
     return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Local GitHub PR polling worker MVP (single run).")
+    parser.add_argument("--config", required=True, help="Path to JSON config file.")
+    args = parser.parse_args()
+    config_path = Path(args.config)
+    cfg = load_config(config_path)
+    return run_single_pass(cfg, config_path)
 
 
 if __name__ == "__main__":
