@@ -43,11 +43,36 @@ def load_config(path: Path) -> dict[str, Any]:
         "pickup_signal_marker",
         "task_contract_path",
         "output_dir",
+        "state_path",
+        "skip_already_processed",
     ]
     missing = [k for k in required if k not in cfg]
     if missing:
         raise ValueError(f"Missing config keys: {', '.join(missing)}")
     return cfg
+
+
+def load_state(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {"version": 1, "processed_pairs": []}
+    with path.open("r", encoding="utf-8") as f:
+        state = json.load(f)
+    if not isinstance(state, dict):
+        raise ValueError("State file must contain a JSON object")
+    if "processed_pairs" not in state or not isinstance(state["processed_pairs"], list):
+        raise ValueError("State file must contain processed_pairs list")
+    return state
+
+
+def save_state(path: Path, state: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as f:
+        json.dump(state, f, indent=2)
+        f.write("\n")
+
+
+def make_pair_key(pr_number: int, head_sha: str) -> str:
+    return f"{pr_number}:{head_sha}"
 
 
 def parse_signal_comment(body: str) -> dict[str, Any]:
@@ -78,7 +103,17 @@ def run_single_pass(cfg: dict[str, Any], config_path: Path) -> int:
     marker = cfg["pickup_signal_marker"]
     default_task_contract = cfg["task_contract_path"]
     output_dir = Path(cfg["output_dir"])
+    state_path = Path(cfg["state_path"])
+    skip_already_processed = bool(cfg.get("skip_already_processed", True))
     invoke_executor_after_write = bool(cfg.get("invoke_executor_after_write", False))
+    state = load_state(state_path)
+    processed_pairs = state.get("processed_pairs", [])
+    seen = {
+        make_pair_key(int(item["pr_number"]), str(item["head_sha"]))
+        for item in processed_pairs
+        if isinstance(item, dict) and "pr_number" in item and "head_sha" in item
+    }
+    state_changed = False
 
     prs = run_gh_json(
         [
@@ -127,6 +162,12 @@ def run_single_pass(cfg: dict[str, Any], config_path: Path) -> int:
         path = write_artifact(output_dir, payload)
         print(f"Wrote {path}")
 
+        pair_key = make_pair_key(payload["pr_number"], payload["head_sha"])
+        already_processed = pair_key in seen
+        if skip_already_processed and already_processed:
+            print(f"Skip executor for already processed pair {pair_key}")
+            continue
+
         if invoke_executor_after_write:
             executor_script = Path(__file__).resolve().parent / "execute_task.py"
             cmd = [
@@ -140,6 +181,19 @@ def run_single_pass(cfg: dict[str, Any], config_path: Path) -> int:
             proc = subprocess.run(cmd, check=False)
             if proc.returncode != 0:
                 return proc.returncode
+            if not already_processed:
+                processed_pairs.append(
+                    {
+                        "pr_number": payload["pr_number"],
+                        "head_sha": payload["head_sha"],
+                        "processed_at": datetime.now(timezone.utc).isoformat(),
+                    }
+                )
+                seen.add(pair_key)
+                state_changed = True
+
+    if state_changed:
+        save_state(state_path, {"version": 1, "processed_pairs": processed_pairs})
 
     return 0
 

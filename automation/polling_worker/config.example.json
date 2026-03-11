@@ -5,6 +5,8 @@
   "pickup_signal_marker": "codex-task-ready: true",
   "task_contract_path": "workflow/current_task.md",
   "output_dir": "automation/polling_worker/out",
+  "state_path": "automation/polling_worker/state.local.json",
+  "skip_already_processed": true,
   "continuous_mode": false,
   "invoke_executor_after_write": false,
   "executor_command": "python -m placeholder_executor",

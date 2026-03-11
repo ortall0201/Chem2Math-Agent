@@ -98,3 +98,23 @@ This mode still:
 - does not write back to GitHub
 - does not install or run as a daemon/service
 - does not use external services
+
+## Duplicate-Safe Repeated Execution
+
+In repeated mode, processed-state tracking can prevent duplicate executor calls.
+
+Config fields:
+
+- `state_path`: local JSON file for processed `(pr_number, head_sha)` pairs
+- `skip_already_processed`: when `true`, skip executor invocation for pairs already seen
+
+Deduplication key:
+
+- `(pr_number, head_sha)`
+
+Behavior:
+
+- same PR and same `head_sha` -> skipped when already processed
+- same PR with a new commit (`head_sha` changes) -> eligible again
+
+State is local. It is not posted back to GitHub.
