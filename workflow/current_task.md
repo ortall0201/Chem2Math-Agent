@@ -6,6 +6,7 @@
   - GitHub-side pickup signaling works.
   - The local polling worker MVP now exists.
   - The polling worker can now be launched from the repo root with one command.
+  - The local executor bridge now exists.
   - The repo already has:
     - PR workflow docs
     - task PR pattern
@@ -13,25 +14,25 @@
     - GitHub pickup signal comment
     - local polling-worker MVP files
 - What is partial:
-  - The system can now detect pickup signals and materialize local task artifacts.
-  - It still does not turn those artifacts into local Codex execution.
+  - The system can now detect pickup signals, materialize local task artifacts, and invoke a configured local executor command.
+  - The polling flow still requires a manual one-shot launch.
 - What is missing or unstable:
-  - there is no local executor bridge from task artifact -> Codex run
-  - there is no claim/process/report loop
-  - there is no GitHub write-back after local execution
+  - there is no continuous or repeated polling mode
+  - future PRs are not picked up automatically unless the user reruns the command
+  - there is still no GitHub write-back after local execution
 
 ## Next approved unit of work
 
-Implement the first local executor bridge so the polling-worker flow can consume a generated task artifact and invoke a local executor command for Codex.
+Implement a continuous/repeated local polling mode so future PRs can be picked up automatically without manual relaunch.
 
 ## Why this task now
 
 - Why this is the highest-value next move:
-  - It is the first step from “detect task” to “start local execution.”
+  - It removes the remaining manual relaunch step in the local pickup loop.
 - Why this should happen before other candidate tasks:
-  - GitHub-side trigger and local polling now both exist.
-  - The next missing piece is actual local execution bridging.
-  - This still stays bounded and local-first without jumping to full autonomous orchestration.
+  - GitHub trigger, local polling, one-command launch, and local executor bridge already exist.
+  - The next missing piece is repeated pickup over time.
+  - This still stays local-first and avoids daemon/service overbuild.
 
 ## Codex handoff
 
@@ -40,6 +41,7 @@ Implement the first local executor bridge so the polling-worker flow can consume
 - `automation/polling_worker/README.md`
 - `automation/polling_worker/config.example.json`
 - `automation/polling_worker/poll_github_prs.py`
+- `automation/polling_worker/execute_task.py`
 - `run_polling_worker.py`
 
 ### Files to modify or create
@@ -47,39 +49,24 @@ Implement the first local executor bridge so the polling-worker flow can consume
 - `automation/polling_worker/README.md`
 - `automation/polling_worker/config.example.json`
 - `automation/polling_worker/poll_github_prs.py`
-- `automation/polling_worker/execute_task.py`
+- `run_polling_worker.py`
 
 ### Exact changes to make
 
-- Create `automation/polling_worker/execute_task.py`.
-- The script should:
-  - use Python standard library only
-  - accept a path to one local task artifact JSON
-  - load the artifact
-  - validate required fields:
-    - `pr_number`
-    - `branch`
-    - `head_sha`
-    - `repo`
-    - `task_contract_path`
-    - `marker_detected`
-  - read an executor command template from config
-  - execute that command locally with the artifact path passed as an argument
-  - return the child process exit code
-- The script must not:
-  - post back to GitHub
-  - change labels
-  - run as a daemon
-  - embed credentials
-- Extend `automation/polling_worker/config.example.json` with safe placeholder fields for local execution only, for example:
-  - `executor_command`
-  - `artifact_path_argument_mode`
-- Keep all values as placeholders only.
-- Update `automation/polling_worker/poll_github_prs.py` only as needed so it can optionally invoke `execute_task.py` after writing an artifact.
-- Recommended minimal behavior:
-  - add an optional config flag such as `invoke_executor_after_write`
-  - example value should be `false`
-  - if enabled, call `execute_task.py` for each newly written artifact
+- Update `run_polling_worker.py` so it can optionally run continuously or repeatedly instead of one-shot only.
+- Preferred minimal interface:
+  - keep existing one-shot behavior by default
+  - add an explicit loop mode such as `--loop`
+  - optional `--interval` override is acceptable if it falls back to config
+- Update `automation/polling_worker/config.example.json` with a safe placeholder field such as:
+  - `continuous_mode`
+- `continuous_mode` example value should be `false`
+- Update `automation/polling_worker/poll_github_prs.py` only as needed to support repeated invocation cleanly.
+- Repeated mode should:
+  - sleep between passes using configured interval
+  - reuse existing polling + artifact + optional executor behavior
+  - stop cleanly on keyboard interrupt
+- Do not convert this into a background service or OS-specific daemon.
 - Keep the current artifact schema unchanged:
   - `pr_number`
   - `branch`
@@ -90,10 +77,11 @@ Implement the first local executor bridge so the polling-worker flow can consume
   - `marker_detected`
 - Keep `output_dir` config-driven.
 - Update `automation/polling_worker/README.md` to document:
-  - detection-only mode
+  - one-shot mode
+  - repeated/continuous local polling mode
   - optional local execution mode
   - still no GitHub write-back
-  - still no continuous daemon
+  - still no daemon/service installation
   - still no external services
 
 ### Constraints to preserve
@@ -105,7 +93,7 @@ Implement the first local executor bridge so the polling-worker flow can consume
 - no `n8n`
 - no non-standard Python dependencies
 - no GitHub write-back yet
-- no daemon/service yet
+- no daemon/service installation
 - no external services
 - no new GitHub Actions
 - no changes to `src/`
@@ -115,16 +103,17 @@ Implement the first local executor bridge so the polling-worker flow can consume
 
 ### Success criteria
 
-- the polling-worker flow can consume a generated artifact and call a local executor command
+- the polling worker can be run once or in repeated mode from the repo root
+- repeated mode picks up future PR signals without manually relaunching each time
 - the existing artifact schema is preserved
 - config additions remain credential-free
-- the repo now has the first local execution bridge without adding full autonomous orchestration
+- the repo gains automatic repeated local pickup without adding full autonomous orchestration
 
 ### What not to change
 
 - do not change unrelated files
 - do not post back to GitHub yet
-- do not add daemon/service behavior yet
+- do not add daemon/service installation
 - do not add external services
 - do not modify electrochemistry logic
 - do not add new GitHub Actions
