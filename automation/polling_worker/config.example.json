@@ -1,0 +1,8 @@
+{
+  "github_repo": "owner/repo",
+  "poll_interval_seconds": 30,
+  "trigger_label": "codex-implement",
+  "pickup_signal_marker": "codex-task-ready: true",
+  "task_contract_path": "workflow/current_task.md",
+  "output_dir": "automation/polling_worker/out"
+}
